@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARK // سیستم هوشمند تشخیص سلامتی v6.0</title>
+    <style>
+        :root {
+            --bg-color: #05050b;
+            --panel-bg: rgba(12, 14, 24, 0.9);
+            --cyan: #00f3ff;
+            --magenta: #ff0055;
+            --yellow: #ffee00;
+            --green: #00ff66;
+            --red: #ff3344;
+            --text: #e0f7fc;
+            --gray: #2a3548;
+            --glow-cyan: 0 0 12px rgba(0, 243, 255, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 80%),
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px), 
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1250px;
+            background: var(--panel-bg);
+            border: 1px solid var(--cyan);
+            box-shadow: var(--glow-cyan);
+            border-radius: 8px;
+            padding: 30px;
+            position: relative;
+        }
+        header { text-align: center; margin-bottom: 25px; border-bottom: 1px solid rgba(0, 243, 255, 0.2); padding-bottom: 15px; }
+        h1 { color: var(--cyan); font-size: 2rem; letter-spacing: 2px; text-shadow: 0 0 10px var(--cyan); }
+        h1 span { color: var(--magenta); }
+        .subtitle { font-size: 0.85rem; color: var(--yellow); margin-top: 4px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; }
+        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+        
+        .section-title { color: var(--yellow); font-size: 1.05rem; margin-bottom: 15px; border-right: 3px solid var(--yellow); padding-right: 10px; }
+        .sub-group-title { color: var(--cyan); font-size: 0.9rem; margin: 15px 0 10px 0; border-bottom: 1px dashed rgba(0, 243, 255, 0.3); padding-bottom: 4px; }
+        
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.8rem; color: #8a99ad; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 8px 12px; background: rgba(8, 8, 17, 0.9); border: 1px solid var(--gray); color: var(--cyan); border-radius: 4px; outline: none; }
+        input:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 8px rgba(0,243,255,0.5); }
+        
+        .toggle-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-toggle { flex: 1; padding: 8px; background: rgba(8, 8, 17, 0.8); border: 1px solid var(--gray); color: var(--text); cursor: pointer; text-align: center; border-radius: 4px; font-size: 0.82rem; }
+        .btn-toggle.active { border-color: var(--magenta); color: var(--magenta); box-shadow: 0 0 10px rgba(255,0,85,0.4); background: rgba(255, 0, 85, 0.1); }
+        .btn-toggle.athlete.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(0,255,102,0.4); background: rgba(0, 255, 102, 0.1); }
+        
+        .activity-details {
+            background: rgba(0,243,255,0.03);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px dashed var(--gray);
+            margin-bottom: 15px;
+            display: none;
+        }
+        .activity-details.visible { display: block; }
+
+        button.btn-submit { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); font-weight: bold; cursor: pointer; margin-top: 15px; border-radius: 4px; box-shadow: var(--glow-cyan); }
+        button.btn-submit:hover { background: var(--cyan); color: var(--bg-color); }
+        
+        .report-section { margin-bottom: 20px; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        
+        .card { 
+            background: rgba(8, 8, 17, 0.7); 
+            border: 1px solid rgba(0, 243, 255, 0.2); 
+            padding: 12px; 
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .card.status-good { border-color: var(--green); box-shadow: 0 0 10px rgba(0, 255, 102, 0.2); }
+        .card.status-bad { border-color: var(--red); box-shadow: 0 0 10px rgba(255, 51, 68, 0.2); }
+        .card.status-warn { border-color: var(--yellow); box-shadow: 0 0 10px rgba(255, 238, 0, 0.2); }
+        
+        .card-title { font-size: 0.75rem; color: #8a99ad; }
+        .card-value { font-size: 1.2rem; font-weight: bold; margin: 4px 0; }
+        .card-value.good { color: var(--green); text-shadow: 0 0 8px rgba(0,255,102,0.5); }
+        .card-value.bad { color: var(--red); text-shadow: 0 0 8px rgba(255,51,68,0.5); }
+        .card-value.warn { color: var(--yellow); text-shadow: 0 0 8px rgba(255,238,0,0.5); }
+        .card-value.neutral { color: var(--cyan); }
+        
+        .card-standard { font-size: 0.7rem; color: var(--yellow); margin-bottom: 2px; }
+        .card-desc { font-size: 0.7rem; color: #a0aec0; }
+        
+        footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--cyan);
+            border-top: 1px solid rgba(0, 243, 255, 0.2);
+            padding-top: 15px;
+            letter-spacing: 1px;
+        }
+        .hip-group { display: none; }
+        .hip-group.visible { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>سیستم هوشمند تشخیص سلامتی <span>MARK</span></h1>
+        <div class="subtitle">ADVANCED BIOMETRIC, HYDRATION & METABOLIC REPORTING SYSTEM v6.0</div>
+    </header>
+
+    <div class="grid">
+        <!-- ورودی‌ها -->
+        <div class="input-section">
+            <div class="section-title">// ورودی‌های بیومتریک و سبُک زندگی</div>
+            
+            <div class="form-group">
+                <label>جنسیت</label>
+                <div class="toggle-container">
+                    <div class="btn-toggle active" id="btn-male" onclick="setGender('male')">مرد</div>
+                    <div class="btn-toggle" id="btn-female" onclick="setGender('female')">زن</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>حالت بدنسازی / ورزشکار حرفه‌ای (Athlete Mode)</label>
+                <div class="toggle-container">
+                    <div class="btn-toggle athlete" id="btn-athlete-off" onclick="setAthlete(false)">غیرفعال</div>
+                    <div class="btn-toggle athlete" id="btn-athlete-on" onclick="setAthlete(true)">فعال (Katch-McArdle)</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group"><label>سن (سال)</label><input type="number" id="age" value="25"></div>
+                <div class="form-group"><label>قد (cm)</label><input type="number" id="height" value="178"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group"><label>وزن (kg)</label><input type="number" id="weight" step="0.1" value="78"></div>
+                <div class="form-group"><label>دور گردن (cm)</label><input type="number" id="neck" step="0.1" value="39"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group"><label>باریک‌ترین بخش کمر (cm)</label><input type="number" id="waist" step="0.1" value="80"></div>
+                <div class="form-group hip-group" id="hip-container"><label>دور باسن (cm)</label><input type="number" id="hip" step="0.1" value="95"></div>
+                <div class="form-group"><label>دور مچ دست (cm)</label><input type="number" id="wrist" step="0.1" value="17.5"></div>
+            </div>
+
+            <!-- سبک فعالیت -->
+            <div class="form-group">
+                <label>سبک و نوع فعالیت بدنی</label>
+                <select id="activity-style" onchange="toggleActivityMode()">
+                    <option value="none">۱. بدون تمرین (نشسته / کارمندی / بدون ورزش)</option>
+                    <option value="walk">۲. فعالیت عادی روزانه (پیاده‌روی ساده / روزمره)</option>
+                    <option value="pro" selected>۳. ورزش حرفه‌ای (تمرینات باشگاهی / تخصصی)</option>
+                </select>
+            </div>
+
+            <div class="activity-details visible" id="activity-details-box">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label id="lbl-days">تعداد روز در هفته</label>
+                        <input type="number" id="act-days" min="0" max="7" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-time">زمان هر جلسه (ساعت)</label>
+                        <input type="number" id="act-time" step="0.25" min="0" max="8" value="2.5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ورودی‌های جدید: آب و کالری مصرفی -->
+            <div class="sub-group-title">// داده‌های مصرف روزانه (اختیاری / متغیر)</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>آب مصرف‌شده امروز (لیتر)</label>
+                    <input type="number" id="water-consumed" step="0.1" placeholder="مثلاً 2.5" value="2.0">
+                </div>
+                <div class="form-group">
+                    <label>کالری مصرف‌شده امروز (kcal)</label>
+                    <input type="number" id="calories-consumed" step="10" placeholder="خالی = ثبت‌نشده">
+                </div>
+            </div>
+
+            <button class="btn-submit" onclick="calculateAll()">تحلیل و پردازش کامل داده‌ها</button>
+        </div>
+
+        <!-- خروجی‌ها به صورت بخش‌بندی مجزا -->
+        <div class="output-section">
+            <div class="section-title">// گزارش‌های تفکیک‌شده سلامت</div>
+
+            <!-- گزارش ۱: هیدراتاسیون و مصرف آب -->
+            <div class="report-section">
+                <div class="sub-group-title">۱. گزارش وضعیت هیدراتاسیون (مصرف آب)</div>
+                <div class="results-grid">
+                    <div class="card" id="card-water-target">
+                        <div class="card-title">میزان آب مورد نیاز بدن</div>
+                        <div class="card-value neutral" id="res-water-target">--</div>
+                        <div class="card-standard">بر اساس وزن و فعالیت</div>
+                        <div class="card-desc">حداقل آب مصرفی روزانه</div>
+                    </div>
+                    <div class="card" id="card-water-status">
+                        <div class="card-title">تحلیل و وضعیت آب مصرفی</div>
+                        <div class="card-value neutral" id="res-water-status">--</div>
+                        <div class="card-standard" id="std-water-consumed">مصرفی: --</div>
+                        <div class="card-desc" id="desc-water-status">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- گزارش ۲: تعادل انرژی و کالری روزانه -->
+            <div class="report-section">
+                <div class="sub-group-title">۲. گزارش متابولیسم و تعادل کالری روزانه</div>
+                <div class="results-grid">
+                    <div class="card" id="card-tdee">
+                        <div class="card-title">TDEE (کالری مورد نیاز حفظ وزن)</div>
+                        <div class="card-value neutral" id="res-tdee">--</div>
+                        <div class="card-standard" id="std-tdee">ضریب فعالیت: --</div>
+                        <div class="card-desc">سقف کالری برای تثبیت</div>
+                    </div>
+                    <div class="card" id="card-cal-balance">
+                        <div class="card-title">تراز کالری دریافتی</div>
+                        <div class="card-value neutral" id="res-cal-balance">--</div>
+                        <div class="card-standard" id="std-cal-consumed">ورودی: ثبت‌نشده</div>
+                        <div class="card-desc" id="desc-cal-balance">مقایسه ورودی با TDEE</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- گزارش ۳: آنالیز توده بدنی و چربی به کیلوگرم -->
+            <div class="report-section">
+                <div class="sub-group-title">۳. گزارش ترکیبی توده بدنی (کیلوگرمی)</div>
+                <div class="results-grid">
+                    <div class="card" id="card-bfp">
+                        <div class="card-title">BFP (درصد چربی بدن)</div>
+                        <div class="card-value neutral" id="res-bfp">--</div>
+                        <div class="card-standard" id="std-bfp">استاندارد: --</div>
+                        <div class="card-desc" id="desc-bfp">--</div>
+                    </div>
+                    <div class="card" id="card-fat-mass">
+                        <div class="card-title">توده چربی (Fat Mass)</div>
+                        <div class="card-value neutral" id="res-fat-mass">--</div>
+                        <div class="card-standard">وزن خالص چربی</div>
+                        <div class="card-desc" id="desc-fat-mass">--</div>
+                    </div>
+                    <div class="card" id="card-lean-mass">
+                        <div class="card-title">توده بدون چربی (Lean Mass)</div>
+                        <div class="card-value neutral" id="res-lean-mass">--</div>
+                        <div class="card-standard">عضله، استخوان، آب</div>
+                        <div class="card-desc" id="desc-lean-mass">--</div>
+                    </div>
+                    <div class="card" id="card-ffmi">
+                        <div class="card-title">FFMI (شاخص عضله)</div>
+                        <div class="card-value neutral" id="res-ffmi">--</div>
+                        <div class="card-standard">استاندارد: حداقل 18-20</div>
+                        <div class="card-desc" id="desc-ffmi">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- گزارش ۴: آنتروپومتریک و شاخص‌های سلامتی -->
+            <div class="report-section">
+                <div class="sub-group-title">۴. گزارش آنتروپومتریک کشوری و سلامت ساختاری</div>
+                <div class="results-grid">
+                    <div class="card" id="card-nat-height">
+                        <div class="card-title">مقایسه قد با میانگین کشور</div>
+                        <div class="card-value neutral" id="res-nat-height">--</div>
+                        <div class="card-standard" id="std-nat-height">میانگین ملی: --</div>
+                        <div class="card-desc" id="desc-nat-height">--</div>
+                    </div>
+                    <div class="card" id="card-nat-weight">
+                        <div class="card-title">مقایسه وزن با میانگین کشور</div>
+                        <div class="card-value neutral" id="res-nat-weight">--</div>
+                        <div class="card-standard" id="std-nat-weight">میانگین ملی: --</div>
+                        <div class="card-desc" id="desc-nat-weight">--</div>
+                    </div>
+                    <div class="card" id="card-bmi">
+                        <div class="card-title">BMI (شاخص توده بدنی)</div>
+                        <div class="card-value neutral" id="res-bmi">--</div>
+                        <div class="card-standard">استاندارد: 18.5 - 24.9</div>
+                        <div class="card-desc" id="desc-bmi">--</div>
+                    </div>
+                    <div class="card" id="card-whtr">
+                        <div class="card-title">WHtR (نسبت کمر به قد)</div>
+                        <div class="card-value neutral" id="res-whtr">--</div>
+                        <div class="card-standard">استاندارد: کمتر از 0.50</div>
+                        <div class="card-desc" id="desc-whtr">--</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        ساخته شده توسط شایان پنجه
+    </footer>
+</div>
+
+<script>
+    let gender = 'male';
+    let isAthlete = false;
+
+    const NATIONAL_AVG = {
+        male: { height: 175.5, weight: 77.0 },
+        female: { height: 161.2, weight: 66.5 }
+    };
+
+    function setGender(g) {
+        gender = g;
+        document.getElementById('btn-male').classList.toggle('active', g === 'male');
+        document.getElementById('btn-female').classList.toggle('active', g === 'female');
+        document.getElementById('hip-container').classList.toggle('visible', g === 'female');
+        calculateAll();
+    }
+
+    function setAthlete(val) {
+        isAthlete = val;
+        document.getElementById('btn-athlete-on').classList.toggle('active', val);
+        document.getElementById('btn-athlete-off').classList.toggle('active', !val);
+        calculateAll();
+    }
+
+    function toggleActivityMode() {
+        const style = document.getElementById('activity-style').value;
+        const box = document.getElementById('activity-details-box');
+        const lblDays = document.getElementById('lbl-days');
+        const lblTime = document.getElementById('lbl-time');
+
+        if (style === 'none') {
+            box.classList.remove('visible');
+        } else if (style === 'walk') {
+            box.classList.add('visible');
+            lblDays.innerText = "روزهای پیاده‌روی در هفته";
+            lblTime.innerText = "مدت پیاده‌روی (ساعت/دقیقه)";
+        } else if (style === 'pro') {
+            box.classList.add('visible');
+            lblDays.innerText = "تعداد جلسات تمرین در هفته";
+            lblTime.innerText = "زمان هر جلسه تمرین (ساعت)";
+        }
+    }
+
+    function setCardStatus(cardId, valId, isGood, valText, descText) {
+        const card = document.getElementById(cardId);
+        const valElem = document.getElementById(valId);
+        
+        card.classList.remove('status-good', 'status-bad', 'status-warn');
+        valElem.classList.remove('good', 'bad', 'warn', 'neutral');
+
+        if(isGood === true) {
+            card.classList.add('status-good');
+            valElem.classList.add('good');
+        } else if(isGood === false) {
+            card.classList.add('status-bad');
+            valElem.classList.add('bad');
+        } else if(isGood === 'warn') {
+            card.classList.add('status-warn');
+            valElem.classList.add('warn');
+        } else {
+            valElem.classList.add('neutral');
+        }
+
+        if(valText !== null) valElem.innerText = valText;
+        if(descText && document.getElementById('desc-' + cardId.replace('card-', ''))) {
+            document.getElementById('desc-' + cardId.replace('card-', '')).innerText = descText;
+        }
+    }
+
+    function calculateAll() {
+        const age = parseFloat(document.getElementById('age').value);
+        const h = parseFloat(document.getElementById('height').value);
+        const w = parseFloat(document.getElementById('weight').value);
+        const neck = parseFloat(document.getElementById('neck').value);
+        const waist = parseFloat(document.getElementById('waist').value);
+        const hip = parseFloat(document.getElementById('hip').value);
+        
+        const actStyle = document.getElementById('activity-style').value;
+        const actDays = parseFloat(document.getElementById('act-days').value) || 0;
+        const actTime = parseFloat(document.getElementById('act-time').value) || 0;
+
+        const waterIn = parseFloat(document.getElementById('water-consumed').value);
+        const calInRaw = document.getElementById('calories-consumed').value;
+        const calIn = calInRaw !== "" ? parseFloat(calInRaw) : null;
+
+        if(!h || !w || h <= 0 || w <= 0) return;
+
+        // --- ۱. محاسبه آب مصرفی ---
+        const totalWeeklyHours = actDays * actTime;
+        const dailyExtraWorkoutHours = totalWeeklyHours / 7;
+        const baseWaterReq = (w * 0.033) + (dailyExtraWorkoutHours * 0.5); // 33ml per kg + 500ml per hour workout
+        document.getElementById('res-water-target').innerText = baseWaterReq.toFixed(1) + " لیتر";
+
+        if(isNaN(waterIn) || waterIn === null) {
+            setCardStatus('card-water-status', 'res-water-status', null, "ثبت نشده", "میزان آب مصرفی وارد نشده");
+            document.getElementById('std-water-consumed').innerText = `مصرفی: ثبت نشده`;
+        } else {
+            const waterDiff = waterIn - baseWaterReq;
+            document.getElementById('std-water-consumed').innerText = `مصرفی: ${waterIn.toFixed(1)} لیتر`;
+            
+            if(Math.abs(waterDiff) <= 0.3) {
+                setCardStatus('card-water-status', 'res-water-status', true, "عالی و متناسب", "هیدراتاسیون بدن کامل است");
+            } else if(waterDiff < -0.3) {
+                const needMore = Math.abs(waterDiff).toFixed(1);
+                setCardStatus('card-water-status', 'res-water-status', false, `کمبود ${needMore} لیتر`, `هنوز ${needMore} لیتر دیگر باید بنوشید`);
+            } else {
+                const extra = waterDiff.toFixed(1);
+                setCardStatus('card-water-status', 'res-water-status', 'warn', `+${extra} لیتر مازاد`, `${extra} لیتر بیشتر از حد استاندارد روزانه`);
+            }
+        }
+
+        // --- ۲. محاسبه BMR و TDEE ---
+        let actMultiplier = 1.2;
+        if (actStyle === 'none') {
+            actMultiplier = 1.2;
+            document.getElementById('std-tdee').innerText = `ضریب فعالیت: 1.2 (بدون تمرین)`;
+        } else if (actStyle === 'walk') {
+            if (totalWeeklyHours <= 2) actMultiplier = 1.25;
+            else if (totalWeeklyHours <= 5) actMultiplier = 1.35;
+            else actMultiplier = 1.45;
+            document.getElementById('std-tdee').innerText = `ضریب پیاده‌روی: ${actMultiplier} (${totalWeeklyHours}h/w)`;
+        } else if (actStyle === 'pro') {
+            if (totalWeeklyHours <= 2.5) actMultiplier = 1.375;
+            else if (totalWeeklyHours <= 5.5) actMultiplier = 1.55;
+            else if (totalWeeklyHours <= 9.5) actMultiplier = 1.725;
+            else actMultiplier = 1.9;
+            document.getElementById('std-tdee').innerText = `ضریب ورزش حرفه‌ای: ${actMultiplier} (${totalWeeklyHours}h/w)`;
+        }
+
+        // BFP (US Navy)
+        let bfp = 0;
+        if (gender === 'male') {
+            bfp = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h)) - 450;
+        } else {
+            bfp = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h)) - 450;
+        }
+        bfp = bfp < 2 ? 2 : bfp;
+
+        const fatMassKg = w * (bfp / 100);
+        const leanMassKg = w - fatMassKg;
+
+        let bmr = 0;
+        if(isAthlete) {
+            bmr = 370 + (21.6 * leanMassKg);
+        } else {
+            bmr = (10 * w) + (6.25 * h) - (5 * age) + (gender === 'male' ? 5 : -161);
+        }
+
+        const tdee = bmr * actMultiplier;
+        document.getElementById('res-tdee').innerText = Math.round(tdee) + " kcal";
+
+        // --- ۳. تراز کالری ---
+        if(calIn === null || isNaN(calIn)) {
+            setCardStatus('card-cal-balance', 'res-cal-balance', null, "ثبت‌نشده", "کالری مصرفی وارد نشده است");
+            document.getElementById('std-cal-consumed').innerText = `ورودی: ثبت‌نشده`;
+        } else {
+            const calDiff = calIn - tdee;
+            document.getElementById('std-cal-consumed').innerText = `ورودی: ${Math.round(calIn)} kcal`;
+            if(Math.abs(calDiff) <= 100) {
+                setCardStatus('card-cal-balance', 'res-cal-balance', true, "تثبیت دقیق", "مصرف دقیقاً برابر با نیاز روزانه");
+            } else if(calDiff < -100) {
+                setCardStatus('card-cal-balance', 'res-cal-balance', 'warn', `${Math.round(calDiff)} kcal`, `کمبود کالری (مناسب چربی‌سوزی)`);
+            } else {
+                setCardStatus('card-cal-balance', 'res-cal-balance', 'warn', `+${Math.round(calDiff)} kcal`, `مازاد کالری (مناسب افزایش وزن/عضله)`);
+            }
+        }
+
+        // --- ۴. BFP و توده چربی/عضله به کیلوگرم ---
+        let bfpGood = false;
+        let bfpStdText = gender === 'male' ? "استاندارد: 10% - 18%" : "استاندارد: 16% - 24%";
+        if(gender === 'male' && bfp >= 6 && bfp <= 18) bfpGood = true;
+        if(gender === 'female' && bfp >= 14 && bfp <= 24) bfpGood = true;
+        
+        let bfpDescText = gender === 'male' ? 
+            (bfp < 6 ? "چربی بسیار پایین" : bfp <= 13 ? "ورزشکاری عالی" : bfp <= 17 ? "تناسب مناسب" : "چربی بالا") :
+            (bfp < 14 ? "چربی بسیار پایین" : bfp <= 20 ? "ورزشکاری عالی" : bfp <= 24 ? "تناسب مناسب" : "چربی بالا");
+
+        document.getElementById('std-bfp').innerText = bfpStdText;
+        setCardStatus('card-bfp', 'res-bfp', bfpGood, bfp.toFixed(1) + "%", bfpDescText);
+
+        document.getElementById('res-fat-mass').innerText = fatMassKg.toFixed(1) + " kg";
+        document.getElementById('desc-fat-mass').innerText = `${((fatMassKg/w)*100).toFixed(1)}% از کل وزن بدن`;
+
+        document.getElementById('res-lean-mass').innerText = leanMassKg.toFixed(1) + " kg";
+        document.getElementById('desc-lean-mass').innerText = `${((leanMassKg/w)*100).toFixed(1)}% از کل وزن بدن`;
+
+        // FFMI
+        const hMeter = h / 100;
+        const ffmi = leanMassKg / (hMeter * hMeter);
+        const normalizedFFMI = ffmi + (6.1 * (1.8 - hMeter));
+        let ffmiGood = normalizedFFMI >= 19;
+        let ffmiDesc = normalizedFFMI < 18 ? "حجم عضلانی پایین" : normalizedFFMI <= 21 ? "حجم عضلانی متوسط" : "عضلانی و بدنساز";
+        setCardStatus('card-ffmi', 'res-ffmi', ffmiGood, normalizedFFMI.toFixed(1), ffmiDesc);
+
+        // --- ۵. مقایسه کشوری ---
+        const avgH = NATIONAL_AVG[gender].height;
+        const diffH = h - avgH;
+        document.getElementById('std-nat-height').innerText = `میانگین کشور (${gender === 'male' ? 'مردان' : 'زنان'}): ${avgH} cm`;
+        if(Math.abs(diffH) < 0.5) {
+            setCardStatus('card-nat-height', 'res-nat-height', null, "برابر میانگین", "مطابق متوسط کشور");
+        } else if(diffH > 0) {
+            setCardStatus('card-nat-height', 'res-nat-height', true, `+${diffH.toFixed(1)} cm`, `${diffH.toFixed(1)} cm بلندتر از میانگین`);
+        } else {
+            setCardStatus('card-nat-height', 'res-nat-height', false, `${diffH.toFixed(1)} cm`, `${Math.abs(diffH).toFixed(1)} cm کوتاه تر از میانگین`);
+        }
+
+        const avgW = NATIONAL_AVG[gender].weight;
+        const diffW = w - avgW;
+        document.getElementById('std-nat-weight').innerText = `میانگین کشور (${gender === 'male' ? 'مردان' : 'زنان'}): ${avgW} kg`;
+        if(Math.abs(diffW) < 0.5) {
+            setCardStatus('card-nat-weight', 'res-nat-weight', null, "برابر میانگین", "مطابق متوسط کشور");
+        } else if(diffW > 0) {
+            setCardStatus('card-nat-weight', 'res-nat-weight', null, `+${diffW.toFixed(1)} kg`, `${diffW.toFixed(1)} kg سنگین‌تر از میانگین`);
+        } else {
+            setCardStatus('card-nat-weight', 'res-nat-weight', null, `${diffW.toFixed(1)} kg`, `${Math.abs(diffW).toFixed(1)} kg سبک‌تر از میانگین`);
+        }
+
+        // BMI
+        const bmi = w / (hMeter * hMeter);
+        let bmiGood = (bmi >= 18.5 && bmi <= 24.9);
+        if(isAthlete && bmi >= 25 && bmi < 30) bmiGood = true; 
+        let bmiDesc = bmi < 18.5 ? "کمبود وزن" : bmi <= 24.9 ? "وزن نرمال" : bmi < 30 ? "اضافه وزن" : "چاقی";
+        setCardStatus('card-bmi', 'res-bmi', bmiGood, bmi.toFixed(1), bmiDesc);
+
+        // WHtR
+        const whtr = waist / h;
+        let whtrGood = whtr < 0.50;
+        let whtrDesc = whtr < 0.50 ? "کمترین ریسک چربی احشایی" : "ریسک چربی احشایی";
+        setCardStatus('card-whtr', 'res-whtr', whtrGood, whtr.toFixed(2), whtrDesc);
+    }
+
+    toggleActivityMode();
+    calculateAll();
+</script>
+</body>
+</html>
